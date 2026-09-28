@@ -5,7 +5,7 @@ import tempfile
 import numpy as np
 
 from physground.contracts import PhysicsParams, Pose2D, PushAction
-from physground.dataset import generate_transition_dataset, sample_inputs
+from physground.dataset import BACKENDS, generate_transition_dataset, sample_inputs
 from physground.dynamics import PlanarPushModel
 
 
@@ -71,3 +71,7 @@ def test_sample_inputs_respect_contract_ranges() -> None:
     assert physics.shape == (100, 4)
     assert np.all((physics[:, 0] >= 0.1) & (physics[:, 0] <= 1.2))
     assert np.all((action[:, 3] >= 0.005) & (action[:, 3] <= 0.08))
+
+
+def test_torch_backend_is_registered_without_importing_torch() -> None:
+    assert "torch-reduced" in BACKENDS
