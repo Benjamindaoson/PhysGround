@@ -28,6 +28,8 @@ jobs:
         run: python -m pytest --ignore=tests/test_acceptance.py
       - name: Benchmark smoke
         run: physground benchmark --methods oracle,nominal,fisher,physground --limit 4 --output /tmp/pushbench-smoke.json
+      - name: Dataset generation smoke
+        run: physground generate-data --backend reduced --records 128 --shard-size 64 --output-dir /tmp/physground-data
       - name: Compile
         run: python -m compileall -q src
 
