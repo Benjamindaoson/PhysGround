@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import json
 import math
+from pathlib import Path
 from typing import Any, Iterable
 
 from physground.belief import ParticleBelief, PhysicsParticle
@@ -48,102 +50,65 @@ def _belief(params: list[PhysicsParams]) -> ParticleBelief:
     return ParticleBelief([PhysicsParticle(item, 1.0) for item in params])
 
 
-def default_cases() -> list[BenchmarkCase]:
-    start = Pose2D(0.0, 0.0, 0.0)
-    goals = [
-        Goal2D(Pose2D(0.10, 0.00, 0.0)),
-        Goal2D(Pose2D(0.08, 0.05, math.radians(10))),
-        Goal2D(Pose2D(0.08, -0.05, math.radians(-10))),
-    ]
+def _physics(values: list[float]) -> PhysicsParams:
+    return PhysicsParams(
+        friction=float(values[0]),
+        cof_x=float(values[1]),
+        cof_y=float(values[2]),
+        rotational_drag=float(values[3]),
+    )
+
+
+def default_reference_path() -> Path:
+    return Path(__file__).resolve().parents[2] / "data" / "reference" / "pushbench_v1.json"
+
+
+def load_cases(path: Path | None = None) -> list[BenchmarkCase]:
+    source = path or default_reference_path()
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    if payload.get("benchmark") != "PhysGround-PushBench-v1":
+        raise ValueError(f"unsupported benchmark payload: {payload.get('benchmark')}")
+
+    priors = {
+        name: [_physics(values) for values in rows]
+        for name, rows in payload["priors"].items()
+    }
+    goals = {
+        name: Goal2D(
+            Pose2D(float(values[0]), float(values[1]), float(values[2])),
+            position_tolerance=float(values[3]),
+            yaw_tolerance=float(values[4]),
+        )
+        for name, values in payload["goals"].items()
+    }
+
     cases: list[BenchmarkCase] = []
-
-    friction_prior = [PhysicsParams(mu, 0.0, 0.0, 1.0) for mu in (0.2, 0.4, 0.7, 1.0)]
-    for idx, hidden in enumerate(friction_prior):
+    for row in payload["cases"]:
+        case_id, regime, goal_id, prior_id, truth_index, *tail = row
+        prior = priors[str(prior_id)]
+        truth = prior[int(truth_index)]
+        mismatch = tail[0] if tail else {}
         cases.append(
             BenchmarkCase(
-                f"p1-friction-{idx}",
-                "P1_FRICTION",
-                start,
-                goals[idx % len(goals)],
-                PhysicsWorld(hidden),
-                _belief(friction_prior),
-            )
-        )
-
-    cof_prior = [
-        PhysicsParams(0.55, x, y, 1.0)
-        for x, y in ((-0.018, 0.0), (0.018, 0.0), (0.0, -0.018), (0.0, 0.018))
-    ]
-    for idx, hidden in enumerate(cof_prior):
-        cases.append(
-            BenchmarkCase(
-                f"p2-cof-{idx}",
-                "P2_COF",
-                start,
-                goals[(idx + 1) % len(goals)],
-                PhysicsWorld(hidden),
-                _belief(cof_prior),
-            )
-        )
-
-    joint_prior = [
-        PhysicsParams(mu, x, y, drag)
-        for mu, x, y, drag in (
-            (0.25, -0.018, 0.0, 0.65),
-            (0.25, 0.018, 0.0, 1.45),
-            (0.85, 0.0, -0.018, 0.65),
-            (0.85, 0.0, 0.018, 1.45),
-            (0.55, -0.012, 0.012, 1.0),
-            (0.55, 0.012, -0.012, 1.0),
-        )
-    ]
-    for idx, hidden in enumerate(joint_prior):
-        cases.append(
-            BenchmarkCase(
-                f"p3-joint-{idx}",
-                "P3_JOINT",
-                start,
-                goals[idx % len(goals)],
-                PhysicsWorld(hidden),
-                _belief(joint_prior),
-            )
-        )
-
-    boundary_prior = [
-        PhysicsParams(0.52, -0.012, 0.004, 0.95),
-        PhysicsParams(0.55, 0.012, -0.004, 1.05),
-    ]
-    boundary_goal = Goal2D(Pose2D(0.07, 0.025, math.radians(22)))
-    for idx, hidden in enumerate(boundary_prior):
-        cases.append(
-            BenchmarkCase(
-                f"p4-boundary-{idx}",
-                "P4_DECISION_BOUNDARY",
-                start,
-                boundary_goal,
-                PhysicsWorld(hidden),
-                _belief(boundary_prior),
-            )
-        )
-
-    mismatch_prior = joint_prior
-    for idx, hidden in enumerate(joint_prior[:3]):
-        cases.append(
-            BenchmarkCase(
-                f"p5-mismatch-{idx}",
-                "P5_MODEL_MISMATCH",
-                start,
-                goals[(idx + 2) % len(goals)],
-                PhysicsWorld(
-                    hidden,
-                    lateral_bias=0.45,
-                    yaw_bias=6.0,
-                    stiction_distance=0.025,
+                case_id=str(case_id),
+                regime=str(regime),
+                initial_pose=Pose2D(0.0, 0.0, 0.0),
+                goal=goals[str(goal_id)],
+                world=PhysicsWorld(
+                    truth,
+                    lateral_bias=float(mismatch.get("lateral_bias", 0.0)),
+                    yaw_bias=float(mismatch.get("yaw_bias", 0.0)),
+                    stiction_distance=float(mismatch.get("stiction_distance", 0.0)),
                 ),
-                _belief(mismatch_prior),
+                prior=_belief(prior),
             )
         )
     return cases
+
+
+def default_cases() -> list[BenchmarkCase]:
+    """Load the versioned 19-case reference benchmark from data/reference."""
+    return load_cases()
 
 
 METHODS = ("oracle", "nominal", "robust", "random", "fisher", "physground")
