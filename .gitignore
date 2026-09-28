@@ -1,6 +1,7 @@
 .venv/
 .venv-core/
 .venv-jax/
+.venv-torch/
 __pycache__/
 *.py[cod]
 .pytest_cache/

@@ -103,6 +103,12 @@ def _rocm_version() -> str | None:
     result = _command(["hipconfig", "--version"])
     if result.get("available") and result.get("returncode") == 0:
         return str(result.get("stdout") or "")
+    try:
+        import torch
+        if torch.version.hip:
+            return str(torch.version.hip)
+    except Exception:
+        pass
     return None
 
 
@@ -164,6 +170,7 @@ def evaluate_readiness(
             nvidia_smi.get("available") and nvidia_smi.get("returncode") == 0
         ),
         "torch_accelerator_available": bool(torch.get("cuda_api_available")),
+        "torch_hip_backend": bool(torch.get("hip")),
         "mujoco_importable": bool(mujoco.get("available")),
         "jax_importable": bool(jax.get("available")),
         "jax_accelerator_backend": bool(
