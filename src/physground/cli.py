@@ -12,6 +12,7 @@ from physground.contracts import Goal2D, PhysicsParams, Pose2D, PushAction, Tran
 from physground.dynamics import PlanarPushModel
 from physground.dataset import BACKENDS, generate_transition_dataset
 from physground.jax_batch import smoke as jax_smoke
+from physground.torch_batch import smoke as torch_smoke
 from physground.preflight import collect_fingerprint, evaluate_readiness
 from physground.planning import PushPlanner, compute_decision_disagreement, generate_goal_directed_actions
 from physground.sysid import FiniteDifferenceSysID
@@ -133,6 +134,16 @@ def jax_smoke_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def torch_smoke_command(args: argparse.Namespace) -> int:
+    payload = torch_smoke(batch_size=args.batch_size, seed=args.seed)
+    _write(payload, args.output)
+    if not payload["finite"]:
+        return 2
+    if args.require_accelerator and payload["device_memory_gb"] <= 0:
+        return 2
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="physground")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -178,6 +189,16 @@ def build_parser() -> argparse.ArgumentParser:
     jax_cmd.add_argument("--output", type=Path)
     jax_cmd.add_argument("--require-accelerator", action="store_true")
     jax_cmd.set_defaults(func=jax_smoke_command)
+
+    torch_cmd = subparsers.add_parser(
+        "torch-smoke",
+        help="Run vectorized reduced dynamics on the preinstalled PyTorch accelerator",
+    )
+    torch_cmd.add_argument("--batch-size", type=int, default=1048576)
+    torch_cmd.add_argument("--seed", type=int, default=0)
+    torch_cmd.add_argument("--output", type=Path)
+    torch_cmd.add_argument("--require-accelerator", action="store_true")
+    torch_cmd.set_defaults(func=torch_smoke_command)
     return parser
 
 
