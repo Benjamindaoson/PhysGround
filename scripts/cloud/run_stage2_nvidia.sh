@@ -4,7 +4,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
-RUN_ROOT="${RUN_ROOT:-artifacts/stage2-nvidia}"
+if [[ -d /root/autodl-tmp ]]; then
+  DEFAULT_RUN_ROOT="/root/autodl-tmp/PhysGround/stage2-nvidia"
+else
+  DEFAULT_RUN_ROOT="artifacts/stage2-nvidia"
+fi
+RUN_ROOT="${RUN_ROOT:-$DEFAULT_RUN_ROOT}"
 REDUCED_RECORDS="${REDUCED_RECORDS:-500000}"
 JAX_RECORDS="${JAX_RECORDS:-500000}"
 MUJOCO_RECORDS="${MUJOCO_RECORDS:-5000}"
