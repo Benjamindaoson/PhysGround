@@ -6,6 +6,10 @@ source "$ROOT/scripts/amd/common.sh"
 PYTHON_BIN="$(resolve_physground_python)"
 print_python_identity "$PYTHON_BIN"
 VENV="${PHYSGROUND_JAX_VENV:-.venv-jax}"
+if [[ -d /root/autodl-tmp ]]; then
+  export PIP_CACHE_DIR="${PIP_CACHE_DIR:-/root/autodl-tmp/pip-cache}"
+  mkdir -p "$PIP_CACHE_DIR"
+fi
 CONSTRAINTS="$ROOT/configs/amd/constraints-rocm723.txt"
 ROCM_VERSION=""
 for file in /opt/rocm/.info/version /opt/rocm/.info/version-dev; do
