@@ -1,0 +1,14 @@
+{
+  "target_image": "ubuntu22.04-rocm7.2.3-py312-torch2.12.0-1.40.1",
+  "expected_rocm_series": "7.2",
+  "jax_version": "0.8.2",
+  "mujoco_version": "3.13.1",
+  "preserve_preinstalled_torch": true,
+  "venvs": {"core": ".venv-core", "jax": ".venv-jax"},
+  "data_targets": {
+    "reduced_records": 500000,
+    "jax_reduced_records": 500000,
+    "mujoco_initial_records": 5000
+  },
+  "run_root": "artifacts/stage2"
+}

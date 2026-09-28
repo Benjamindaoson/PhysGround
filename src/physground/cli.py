@@ -10,6 +10,9 @@ from physground.benchmark import METHODS, default_cases, evaluate_acceptance, ru
 from physground.belief import ParticleBelief, PhysicsParticle
 from physground.contracts import Goal2D, PhysicsParams, Pose2D, PushAction, Transition
 from physground.dynamics import PlanarPushModel
+from physground.dataset import BACKENDS, generate_transition_dataset
+from physground.jax_batch import smoke as jax_smoke
+from physground.preflight import collect_fingerprint, evaluate_readiness
 from physground.planning import PushPlanner, compute_decision_disagreement, generate_goal_directed_actions
 from physground.sysid import FiniteDifferenceSysID
 
@@ -93,6 +96,42 @@ def disagreement_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def preflight_command(args: argparse.Namespace) -> int:
+    fingerprint = collect_fingerprint()
+    readiness = evaluate_readiness(
+        fingerprint,
+        require_rocm=args.require_rocm,
+        require_jax_gpu=args.require_jax_gpu,
+        require_mujoco=args.require_mujoco,
+    )
+    payload = {"fingerprint": fingerprint, "readiness": readiness}
+    _write(payload, args.output)
+    return 0 if readiness["passed"] else 2
+
+
+def generate_data_command(args: argparse.Namespace) -> int:
+    payload = generate_transition_dataset(
+        output_dir=args.output_dir,
+        records=args.records,
+        shard_size=args.shard_size,
+        seed=args.seed,
+        backend=args.backend,
+        resume=args.resume,
+    )
+    _write(payload, args.manifest_copy)
+    return 0
+
+
+def jax_smoke_command(args: argparse.Namespace) -> int:
+    payload = jax_smoke(batch_size=args.batch_size, seed=args.seed)
+    _write(payload, args.output)
+    if not payload["finite"]:
+        return 2
+    if args.require_accelerator and payload["backend"] == "cpu":
+        return 2
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="physground")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -113,6 +152,30 @@ def build_parser() -> argparse.ArgumentParser:
     )
     disagreement.add_argument("--output", type=Path)
     disagreement.set_defaults(func=disagreement_command)
+
+    preflight = subparsers.add_parser("preflight", help="Inspect ROCm/JAX/MuJoCo readiness")
+    preflight.add_argument("--output", type=Path)
+    preflight.add_argument("--require-rocm", action="store_true")
+    preflight.add_argument("--require-jax-gpu", action="store_true")
+    preflight.add_argument("--require-mujoco", action="store_true")
+    preflight.set_defaults(func=preflight_command)
+
+    generate = subparsers.add_parser("generate-data", help="Generate sharded transition data")
+    generate.add_argument("--backend", choices=sorted(BACKENDS), default="reduced")
+    generate.add_argument("--records", type=int, required=True)
+    generate.add_argument("--shard-size", type=int, default=50000)
+    generate.add_argument("--seed", type=int, default=42)
+    generate.add_argument("--output-dir", required=True, type=Path)
+    generate.add_argument("--manifest-copy", type=Path)
+    generate.add_argument("--resume", action="store_true")
+    generate.set_defaults(func=generate_data_command)
+
+    jax_cmd = subparsers.add_parser("jax-smoke", help="Run vectorized reduced dynamics on JAX")
+    jax_cmd.add_argument("--batch-size", type=int, default=65536)
+    jax_cmd.add_argument("--seed", type=int, default=0)
+    jax_cmd.add_argument("--output", type=Path)
+    jax_cmd.add_argument("--require-accelerator", action="store_true")
+    jax_cmd.set_defaults(func=jax_smoke_command)
     return parser
 
 

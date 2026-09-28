@@ -1,4 +1,6 @@
 .venv/
+.venv-core/
+.venv-jax/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -7,5 +9,6 @@ __pycache__/
 htmlcov/
 artifacts/
 reports/
+data/generated/
 *.egg-info/
 .DS_Store
