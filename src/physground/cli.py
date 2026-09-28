@@ -101,6 +101,7 @@ def preflight_command(args: argparse.Namespace) -> int:
     readiness = evaluate_readiness(
         fingerprint,
         require_rocm=args.require_rocm,
+        require_cuda=args.require_cuda,
         require_jax_gpu=args.require_jax_gpu,
         require_mujoco=args.require_mujoco,
     )
@@ -156,6 +157,7 @@ def build_parser() -> argparse.ArgumentParser:
     preflight = subparsers.add_parser("preflight", help="Inspect ROCm/JAX/MuJoCo readiness")
     preflight.add_argument("--output", type=Path)
     preflight.add_argument("--require-rocm", action="store_true")
+    preflight.add_argument("--require-cuda", action="store_true")
     preflight.add_argument("--require-jax-gpu", action="store_true")
     preflight.add_argument("--require-mujoco", action="store_true")
     preflight.set_defaults(func=preflight_command)

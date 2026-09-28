@@ -25,7 +25,7 @@ jobs:
       - name: Lint
         run: python -m ruff check src tests
       - name: Shell syntax
-        run: bash -n scripts/amd/*.sh
+        run: bash -n scripts/amd/*.sh scripts/cloud/*.sh
       - name: Python resolver smoke
         run: bash -lc 'source scripts/amd/common.sh; p="$(resolve_physground_python)"; print_python_identity "$p"'
       - name: Unit tests

@@ -106,6 +106,16 @@ def _rocm_version() -> str | None:
     return None
 
 
+def _nvidia_status() -> dict[str, Any]:
+    return {
+        "nvidia_smi": _command([
+            "nvidia-smi",
+            "--query-gpu=name,memory.total,driver_version",
+            "--format=csv,noheader,nounits",
+        ]),
+    }
+
+
 def collect_fingerprint() -> dict[str, Any]:
     return {
         "schema_version": "1.0",
@@ -121,6 +131,7 @@ def collect_fingerprint() -> dict[str, Any]:
             "rocminfo": _command(["rocminfo"]),
             "rocm_smi": _command(["rocm-smi", "--showproductname", "--showmeminfo", "vram"]),
         },
+        "nvidia": _nvidia_status(),
         "python_packages": {
             "numpy": _module_version("numpy"),
             "mujoco": _module_version("mujoco"),
@@ -135,17 +146,24 @@ def evaluate_readiness(
     fingerprint: dict[str, Any],
     *,
     require_rocm: bool = False,
+    require_cuda: bool = False,
     require_jax_gpu: bool = False,
     require_mujoco: bool = False,
 ) -> dict[str, Any]:
     rocm_version = fingerprint["rocm"].get("version")
     jax = fingerprint["jax"]
     mujoco = fingerprint["python_packages"]["mujoco"]
+    nvidia_smi = fingerprint["nvidia"]["nvidia_smi"]
+    torch = fingerprint["torch"]
     checks = {
         "python_supported": sys.version_info >= (3, 11),
         "python_3_12_target": sys.version_info >= (3, 12),
         "rocm_present": bool(rocm_version),
         "rocm_7_2_series": bool(rocm_version and str(rocm_version).startswith("7.2")),
+        "nvidia_smi_available": bool(
+            nvidia_smi.get("available") and nvidia_smi.get("returncode") == 0
+        ),
+        "torch_accelerator_available": bool(torch.get("cuda_api_available")),
         "mujoco_importable": bool(mujoco.get("available")),
         "jax_importable": bool(jax.get("available")),
         "jax_accelerator_backend": bool(
@@ -155,6 +173,8 @@ def evaluate_readiness(
     required = ["python_supported"]
     if require_rocm:
         required.extend(["rocm_present", "rocm_7_2_series"])
+    if require_cuda:
+        required.extend(["nvidia_smi_available", "torch_accelerator_available"])
     if require_mujoco:
         required.append("mujoco_importable")
     if require_jax_gpu:
@@ -170,6 +190,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Inspect PhysGround runtime readiness.")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--require-rocm", action="store_true")
+    parser.add_argument("--require-cuda", action="store_true")
     parser.add_argument("--require-jax-gpu", action="store_true")
     parser.add_argument("--require-mujoco", action="store_true")
     args = parser.parse_args(argv)
@@ -178,6 +199,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     readiness = evaluate_readiness(
         fingerprint,
         require_rocm=args.require_rocm,
+        require_cuda=args.require_cuda,
         require_jax_gpu=args.require_jax_gpu,
         require_mujoco=args.require_mujoco,
     )
