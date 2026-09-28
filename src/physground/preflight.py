@@ -142,7 +142,8 @@ def evaluate_readiness(
     jax = fingerprint["jax"]
     mujoco = fingerprint["python_packages"]["mujoco"]
     checks = {
-        "python_3_12_or_newer": sys.version_info >= (3, 12),
+        "python_supported": sys.version_info >= (3, 11),
+        "python_3_12_target": sys.version_info >= (3, 12),
         "rocm_present": bool(rocm_version),
         "rocm_7_2_series": bool(rocm_version and str(rocm_version).startswith("7.2")),
         "mujoco_importable": bool(mujoco.get("available")),
@@ -151,7 +152,7 @@ def evaluate_readiness(
             jax.get("available") and jax.get("backend") not in (None, "cpu")
         ),
     }
-    required = ["python_3_12_or_newer"]
+    required = ["python_supported"]
     if require_rocm:
         required.extend(["rocm_present", "rocm_7_2_series"])
     if require_mujoco:
