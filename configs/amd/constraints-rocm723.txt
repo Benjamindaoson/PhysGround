@@ -1,0 +1,6 @@
+jax==0.8.2
+jaxlib==0.8.2
+jax-rocm7-plugin==0.8.2
+jax-rocm7-pjrt==0.8.2
+mujoco==3.13.1
+mujoco-mjx==3.13.1
