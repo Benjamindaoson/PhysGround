@@ -148,10 +148,21 @@ def _jax_batch(
     return batched_planar_step(before, action, physics)
 
 
+def _torch_batch(
+    before: np.ndarray,
+    action: np.ndarray,
+    physics: np.ndarray,
+) -> np.ndarray:
+    from physground.torch_batch import batched_planar_step
+
+    return batched_planar_step(before, action, physics)
+
+
 BACKENDS: dict[str, Callable[[np.ndarray, np.ndarray, np.ndarray], np.ndarray]] = {
     "reduced": _reduced_batch,
     "mujoco": _mujoco_batch,
     "jax-reduced": _jax_batch,
+    "torch-reduced": _torch_batch,
 }
 
 
