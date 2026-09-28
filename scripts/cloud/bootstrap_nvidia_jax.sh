@@ -27,6 +27,10 @@ else
 fi
 
 VENV="${PHYSGROUND_NVIDIA_JAX_VENV:-.venv-jax-cuda}"
+if [[ -d /root/autodl-tmp ]]; then
+  export PIP_CACHE_DIR="${PIP_CACHE_DIR:-/root/autodl-tmp/pip-cache}"
+  mkdir -p "$PIP_CACHE_DIR"
+fi
 "$PYTHON_BIN" -m venv "$VENV"
 source "$VENV/bin/activate"
 
