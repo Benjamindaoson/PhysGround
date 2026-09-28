@@ -1,0 +1,24 @@
+{
+  "benchmark": "PhysGround-PushBench-v1",
+  "physics_latents": ["friction", "cof_x", "cof_y", "rotational_drag"],
+  "regimes": [
+    "P1_FRICTION",
+    "P2_COF",
+    "P3_JOINT",
+    "P4_DECISION_BOUNDARY",
+    "P5_MODEL_MISMATCH"
+  ],
+  "methods": ["oracle", "nominal", "robust", "random", "fisher", "physground"],
+  "primary_metrics": [
+    "success_rate",
+    "mean_decision_regret",
+    "mean_probes",
+    "false_confidence_rate",
+    "mean_parameter_error"
+  ],
+  "research_claim_boundary": {
+    "primary_target": "decision sufficiency, not parameter reconstruction accuracy",
+    "real_robot": "not claimed until SO-101 experiments are retained",
+    "mujoco": "optional verifier; reduced model is the default CI backend"
+  }
+}
