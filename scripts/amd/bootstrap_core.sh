@@ -2,7 +2,9 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
-PYTHON_BIN="${PYTHON_BIN:-python3.12}"
+source "$ROOT/scripts/amd/common.sh"
+PYTHON_BIN="$(resolve_physground_python)"
+print_python_identity "$PYTHON_BIN"
 VENV="${PHYSGROUND_CORE_VENV:-.venv-core}"
 "$PYTHON_BIN" -m venv "$VENV"
 source "$VENV/bin/activate"
