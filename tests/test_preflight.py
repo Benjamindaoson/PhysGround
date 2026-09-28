@@ -42,3 +42,21 @@ def test_readiness_can_require_cuda_without_rocm() -> None:
     assert result["checks"]["nvidia_smi_available"]
     assert result["checks"]["torch_accelerator_available"]
     assert result["passed"]
+
+
+def test_readiness_accepts_torch_hip_as_rocm_runtime() -> None:
+    fingerprint = {
+        "rocm": {"version": "7.2.3"},
+        "nvidia": {"nvidia_smi": {"available": False}},
+        "python_packages": {"mujoco": {"available": False}},
+        "torch": {
+            "hip": "7.2.3",
+            "cuda_api_available": True,
+        },
+        "jax": {"available": False},
+    }
+    result = evaluate_readiness(fingerprint, require_rocm=True)
+    assert result["checks"]["rocm_present"]
+    assert result["checks"]["rocm_7_2_series"]
+    assert result["checks"]["torch_hip_backend"]
+    assert result["passed"]
