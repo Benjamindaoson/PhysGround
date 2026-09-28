@@ -14,4 +14,5 @@ def test_readiness_can_be_evaluated_without_accelerator_requirements() -> None:
     fingerprint = collect_fingerprint()
     result = evaluate_readiness(fingerprint)
     assert "checks" in result
-    assert "python_3_12_or_newer" in result["checks"]
+    assert "python_supported" in result["checks"]
+    assert "python_3_12_target" in result["checks"]
